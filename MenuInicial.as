@@ -8,12 +8,12 @@ IO_READ         EQU     FFFFh
 IO_WRITE        EQU     FFFEh
 IO_STATUS       EQU     FFFDh
 INITIAL_SP      EQU     FDFFh
-CURSOR		    EQU     FFFCh
-CURSOR_INIT		EQU		FFFFh
-ROW_POSITION	EQU		0d
-COL_POSITION	EQU		0d
-ROW_SHIFT		EQU		8d
-COLUMN_SHIFT	EQU		8d
+CURSOR		EQU     FFFCh
+CURSOR_INIT	EQU	FFFFh
+ROW_POSITION	EQU	0d
+COL_POSITION	EQU	0d
+ROW_SHIFT	EQU	8d
+COLUMN_SHIFT	EQU	8d
 
 ;------------------------------------------------------------------------------
 ; ZONA II: definicao de variaveis
@@ -62,38 +62,38 @@ TextIndex		WORD	0d
                 JMP     Main
 
 ;------------------------------------------------------------------------------
-; Função para escrever uma String
+; Função para escrever o mapa
 ;------------------------------------------------------------------------------
-WriteStr: 	PUSH	R1
-			PUSH	R2
-			PUSH	R3
-			PUSH	R4
+WriteMap:	PUSH	R1
+		PUSH	R2
+		PUSH	R3
+		PUSH	R4
 
-			MOV		R4, M[TextIndex]
+		MOV	R4, M[TextIndex]
 
-WriteCol:	MOV		R2, 0d
+WriteCol:	MOV	R2, 0d
 
-WriteChar:	MOV		R3, M[ R4 ]
-			MOV		R1, M[ RowIndex ]
-			SHL		R1, ROW_SHIFT
-			OR		R1, R2
-			MOV		M[ CURSOR ], R1
-			MOV     M[ IO_WRITE ], R3
-			INC		R2
-			INC		R4
-			CMP		R3, FIM_TEXTO
-			JMP.NZ	WriteChar
+WriteChar:	MOV	R3, M[ R4 ]
+		MOV	R1, M[ RowIndex ]
+		SHL	R1, ROW_SHIFT
+		OR	R1, R2
+		MOV	M[ CURSOR ], R1
+		MOV     M[ IO_WRITE ], R3
+		INC	R2
+		INC	R4
+		CMP	R3, FIM_TEXTO
+		JMP.NZ	WriteChar
 
-			INC		M[ RowIndex ]
-			MOV		R1, M[ RowIndex ]
-			CMP		R1, M[ RowLimit ]
-			JMP.NZ	WriteCol
+		INC	M[ RowIndex ]
+		MOV	R1, M[ RowIndex ]
+		CMP	R1, M[ RowLimit ]
+		JMP.NZ	WriteCol
 
-EndWrite:	POP		R4
-			POP		R3
-			POP		R2
-			POP		R1
-			RET
+EndWrite:	POP	R4
+		POP	R3
+		POP	R2
+		POP	R1
+		RET
 
 ;------------------------------------------------------------------------------
 ; Função para escrever o Menu
@@ -101,9 +101,9 @@ EndWrite:	POP		R4
 WriteMenu:     	PUSH    R1
                 PUSH    R2
 				
-				MOV     R1, L0
-				MOV		M[ TextIndex ], R1
-				CALL 	WriteStr
+		MOV     R1, L0
+		MOV	M[ TextIndex ], R1
+		CALL 	WriteMap
 
                 POP     R2
                 POP     R1
@@ -112,14 +112,14 @@ WriteMenu:     	PUSH    R1
 ;------------------------------------------------------------------------------
 ; Função Main
 ;------------------------------------------------------------------------------
-Main:			ENI
+Main:	ENI
 
-				MOV		R1, INITIAL_SP
-				MOV		SP, R1		 		; We need to initialize the stack
-				MOV		R1, CURSOR_INIT		; We need to initialize the cursor 
-				MOV		M[ CURSOR ], R1		; with value CURSOR_INIT
+	MOV	R1, INITIAL_SP
+	MOV	SP, R1		 	; We need to initialize the stack
+	MOV	R1, CURSOR_INIT		; We need to initialize the cursor 
+	MOV	M[ CURSOR ], R1		; with value CURSOR_INIT
 				
-				CALL 	WriteMenu
+	CALL	WriteMenu
 
-Cycle: 			BR		Cycle	
-Halt:           BR		Halt
+Cycle: 	BR		Cycle	
+Halt:  	BR		Halt
