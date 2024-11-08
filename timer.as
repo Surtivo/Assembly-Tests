@@ -2,17 +2,17 @@
 ; ZONA I: Definicao de constantes
 ;         Pseudo-instrucao : EQU
 ;------------------------------------------------------------------------------
-CR              EQU     0Ah
-FIM_TEXTO       EQU     '@'
-IO_READ         EQU     FFFFh
-IO_WRITE        EQU     FFFEh
-IO_STATUS       EQU     FFFDh
-INITIAL_SP      EQU     FDFFh
-CURSOR		EQU     FFFCh
-CURSOR_INIT	EQU	FFFFh
-TIMER_COUNT     EQU     FFF6h
-TIMER_CONTROL   EQU     FFF7h
-INTERRUPTION_MASK   EQU     FFFAh
+CR              	EQU     	0Ah
+FIM_TEXTO       	EQU     	'@'
+IO_READ         	EQU     	FFFFh
+IO_WRITE        	EQU     	FFFEh
+IO_STATUS       	EQU     	FFFDh
+INITIAL_SP      	EQU     	FDFFh
+CURSOR			EQU     	FFFCh
+CURSOR_INIT		EQU		FFFFh
+TIMER_COUNT     	EQU     	FFF6h
+TIMER_CONTROL   	EQU     	FFF7h
+INTERRUPTION_MASK   	EQU     	FFFAh
 
 ;------------------------------------------------------------------------------
 ; ZONA II: definicao de variaveis
@@ -78,12 +78,12 @@ InitializeTimer:  PUSH R1
 ;------------------------------------------------------------------------------
 Main:	ENI
 
-        MOV		R1, INITIAL_SP
-	MOV		SP, R1		 		; We need to initialize the stack
-	MOV		R1, CURSOR_INIT		; We need to initialize the cursor 
-	MOV		M[ CURSOR ], R1		; with value CURSOR_INIT
+        MOV	R1, INITIAL_SP
+	MOV	SP, R1			; We need to initialize the stack
+	MOV	R1, CURSOR_INIT		; We need to initialize the cursor 
+	MOV	M[ CURSOR ], R1		; with value CURSOR_INIT
 
         CALL    InitializeTimer
 
-Cycle: 			BR		Cycle	
-Halt:           BR		Halt
+Cycle: 	BR		Cycle	
+Halt:	BR		Halt
