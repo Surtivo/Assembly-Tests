@@ -1,3 +1,5 @@
+; NÃO ESTÁ FUNCIONANDO CORRETAMENTE
+; POR ALGUM MOTIVO QUANDO CHAMA O PRINTEND BUGA
 ;------------------------------------------------------------------------------
 ; ZONA I: Definicao de constantes
 ;         Pseudo-instrucao : EQU
@@ -9,13 +11,13 @@ IO_WRITE        	EQU     	FFFEh
 IO_STATUS       	EQU     	FFFDh
 INITIAL_SP      	EQU     	FDFFh
 CURSOR		    	EQU     	FFFCh
-CURSOR_INIT			EQU			FFFFh
+CURSOR_INIT		EQU		FFFFh
 TIMER_COUNT     	EQU     	FFF6h
 TIMER_CONTROL   	EQU     	FFF7h
-INTERRUPTION_MASK   EQU     	FFFAh
-ROW_SHIFT			EQU			8d
-ROW_LIMIT			EQU			24d
-COL_LIMIT			EQU			80d
+INTERRUPTION_MASK   	EQU     	FFFAh
+ROW_SHIFT		EQU		8d
+ROW_LIMIT		EQU		24d
+COL_LIMIT		EQU		80d
 
 ;------------------------------------------------------------------------------
 ; ZONA II: definicao de variaveis
@@ -50,9 +52,9 @@ L21             STR     '#                                                      
 L22             STR     '#                                                                              #', FIM_TEXTO
 L23             STR     '################################################################################', FIM_TEXTO
 
-LFim_Jogo		STR		'*****GAME OVER*****                            #', FIM_TEXTO
+LFim_Jogo	STR	'*****GAME OVER*****                            #', FIM_TEXTO
 
-Char            WORD    'o'
+Char            	WORD    'o'
 RowIndex		WORD	0d
 ColumnIndex		WORD	0d
 TextIndex		WORD	0d
@@ -104,131 +106,130 @@ Timer:  PUSH    R1
         MOV     M [IO_WRITE ], R1
 
         CALL	ClearPath
-		INC     M[ HeadColPosition ]
-		INC		M[ TailColPosition ]
+	INC     M[ HeadColPosition ]
+	INC	M[ TailColPosition ]
 
-		MOV		R1, M[ HeadColPosition ]
-		CMP		R1, COL_LIMIT
-		CALL.NZ	InitializeTimer
+	MOV	R1, M[ HeadColPosition ]
+	CMP	R1, COL_LIMIT
+	CALL.NZ	InitializeTimer
 
         CALL	PrintEnd	;;NÃO SEI PQ ESSA PORRA FICA PRINTANDO TODA FUCKING HORA NESSE CARALHO!
 
     	POP     R2
-		POP     R1
-	    RTI
+	POP     R1
+    	RTI
 
 ;------------------------------------------------------------------------------
 ; Rotina para inicializar o timer
 ;------------------------------------------------------------------------------
 InitializeTimer:	PUSH 	R1
-					PUSH	R2
+			PUSH	R2
 
-					MOV     R1, 5d
-					MOV     M[ TIMER_COUNT ], R1
-					MOV     R1, 1d
-					MOV     M[ TIMER_CONTROL ], R1
+			MOV     R1, 5d
+			MOV     M[ TIMER_COUNT ], R1
+			MOV     R1, 1d
+			MOV     M[ TIMER_CONTROL ], R1
 
-EndRoutine:			POP		R2
-					POP 	R1
-					RET
+EndRoutine:		POP	R2
+			POP 	R1
+			RET
 
 ;------------------------------------------------------------------------------
 ; Rotina para limpar o espaço anterior
 ;------------------------------------------------------------------------------
 ClearPath:	PUSH 	R1
-			PUSH	R2
+		PUSH	R2
 
-			MOV     R1, M[ TailRowPosition ]
+		MOV     R1, M[ TailRowPosition ]
         	MOV     R2, M[ TailColPosition ]
-			DEC 	R2
+		DEC 	R2
         	SHL     R1, ROW_SHIFT
         	OR      R1, R2
         	MOV     M[ CURSOR ], R1
         	MOV     R1, ' '
         	MOV     M [IO_WRITE ], R1
 			
-			POP		R2
-			POP 	R1
-			RET					
+		POP	R2
+		POP 	R1
+		RET					
 
 ;------------------------------------------------------------------------------
 ; Rotina para escrever o mapa
 ;------------------------------------------------------------------------------
 WriteMap: 	PUSH	R1
-			PUSH	R2
-			PUSH	R3
-			PUSH	R4
+		PUSH	R2
+		PUSH	R3
+		PUSH	R4
 
-			MOV     R1, L0
-			MOV		M[ TextIndex ], R1
-			MOV		R4, M[ TextIndex ]
+		MOV     R1, L0
+		MOV	M[ TextIndex ], R1
+		MOV	R4, M[ TextIndex ]
 
-WriteCol:	MOV		R2, 0d
+WriteCol:	MOV	R2, 0d
 
-WriteChar:	MOV		R3, M[ R4 ]
-			MOV		R1, M[ RowIndex ]
-			SHL		R1, ROW_SHIFT
-			OR		R1, R2
-			MOV		M[ CURSOR ], R1
-			MOV     M[ IO_WRITE ], R3
-			INC		R2
-			INC		R4
-			CMP		R3, FIM_TEXTO
-			JMP.NZ	WriteChar
+WriteChar:	MOV	R3, M[ R4 ]
+		MOV	R1, M[ RowIndex ]
+		SHL	R1, ROW_SHIFT
+		OR	R1, R2
+		MOV	M[ CURSOR ], R1
+		MOV     M[ IO_WRITE ], R3
+		INC	R2
+		INC	R4
+		CMP	R3, FIM_TEXTO
+		JMP.NZ	WriteChar
 
-			INC		M[ RowIndex ]
-			MOV		R1, M[ RowIndex ]
-			CMP		R1, ROW_LIMIT
-			JMP.NZ	WriteCol
+		INC	M[ RowIndex ]
+		MOV	R1, M[ RowIndex ]
+		CMP	R1, ROW_LIMIT
+		JMP.NZ	WriteCol
 
-EndWrite:	POP		R4
-			POP		R3
-			POP		R2
-			POP		R1
-			RET
+EndWrite:	POP	R4
+		POP	R3
+		POP	R2
+		POP	R1
+		RET
 
 ;------------------------------------------------------------------------------
 ; Rotina para encerrar o jogo
 ;------------------------------------------------------------------------------
 PrintEnd: 	PUSH	R1
-			PUSH	R2
-			PUSH	R3
-			PUSH	R4
+		PUSH	R2
+		PUSH	R3
+		PUSH	R4
 
-			MOV     R1, LFim_Jogo
-			MOV		M[ TextIndex ], R1
-			MOV		R4, M[ TextIndex ]
-			MOV		R2, 32d
+		MOV     R1, LFim_Jogo
+		MOV	M[ TextIndex ], R1
+		MOV	R4, M[ TextIndex ]
+		MOV	R2, 32d
 
-WriteEndC:	MOV		R3, M[ R4 ]
-			MOV		R1, 12d
-			SHL		R1, ROW_SHIFT
-			OR		R1, R2
-			MOV		M[ CURSOR ], R1
-			MOV     M[ IO_WRITE ], R3
-			INC		R2
-			INC		R4
-			CMP		R3, FIM_TEXTO
-			JMP.NZ	WriteEndC
+WriteEndC:	MOV	R3, M[ R4 ]
+		MOV	R1, 12d
+		SHL	R1, ROW_SHIFT
+		OR	R1, R2
+		MOV	M[ CURSOR ], R1
+		MOV     M[ IO_WRITE ], R3
+		INC	R2
+		INC	R4
+		CMP	R3, FIM_TEXTO
+		JMP.NZ	WriteEndC
 
-EndGame:	POP		R4
-			POP		R3
-			POP		R2
-			POP		R1
-			RET
+EndGame:	POP	R4
+		POP	R3
+		POP	R2
+		POP	R1
+		RET
 
 ;------------------------------------------------------------------------------
 ; Main
 ;------------------------------------------------------------------------------
 Main:	ENI
-		
-		MOV		R1, INITIAL_SP
-		MOV		SP, R1		 		; We need to initialize the stack
-		MOV		R1, CURSOR_INIT		; We need to initialize the cursor 
-		MOV		M[ CURSOR ], R1		; with value CURSOR_INIT
-		
-		CALL 	WriteMap
-		CALL	InitializeTimer
+	MOV	R1, INITIAL_SP
+	MOV	SP, R1		 		; We need to initialize the stack
+	MOV	R1, CURSOR_INIT		; We need to initialize the cursor 
+	MOV	M[ CURSOR ], R1		; with value CURSOR_INIT
 
-Cycle: 			BR		Cycle	
-Halt:           BR		Halt
+	CALL 	WriteMap
+	CALL	InitializeTimer
+
+Cycle: 	BR	Cycle	
+Halt:	BR	Halt
