@@ -11,18 +11,27 @@ INITIAL_SP      	EQU     	FDFFh
 CURSOR		    	EQU     	FFFCh
 CURSOR_INIT			EQU			FFFFh
 TIMER_COUNT     	EQU     	FFF6h
-TIMER_CONTROL   	EQU     	FFF7h			;BUGADO PARA TROCAR AS POSIÇÕES E O MENU TÁ MAL FEITO
-INTERRUPTION_MASK   EQU     	FFFAh			;O TIMER NÃO PARA MESMO QUANDO ENCERRA O JOGO (DEVIDO AO TIMER SE CHAMAR NOVAMENTE SE REATIVANDO)
-ROW_SHIFT			EQU			8d				;COBRA DE TAMANHO 1 NÃO LIMPA DIREITO O CAMINHO PERCORRIDO
+TIMER_CONTROL   	EQU     	FFF7h			;O MENU TÁ MAL FEITO
+INTERRUPTION_MASK   EQU     	FFFAh			;O TIMER NÃO PARA MESMO QUANDO ENCERRA O JOGO (REOSLVIDO)
+ROW_SHIFT			EQU			8d				;COBRA DE TAMANHO 1 NÃO LIMPA DIREITO O CAMINHO PERCORRIDO (agora limpa, na força bruta, mas limpa)
 ROW_LIMIT			EQU			24d				;COBRA MAIOR QUE 1 NÃO FUNCIONA
-COL_LIMIT_RIGHT		EQU			80d				
-COL_LIMIT_LEFT		EQU			1d
+COL_LIMIT_RIGHT		EQU			79d				;RAMDOM GERA VALORES ALEATORIO ENTRE 0 E 24
+COL_LIMIT_LEFT		EQU			0d
 ROW_LIMIT_DOWN		EQU			23d
 ROW_LIMIT_UP		EQU			2d
 U_KEY				EQU			1d 
 L_KEY				EQU			2d
 D_KEY				EQU			3d
 R_KEY				EQU			4d
+
+
+; padrao de bits para geracao de numero aleatorio
+RND_MASK		EQU	8016h	; 1000 0000 0001 0110b
+							; 1010 0101 1010 0101
+							; 0010 0101 1011 0011 -> 0100 1011 0110 0110 (depois do ROR)
+LSB_MASK		EQU	0001h	; Mascara para testar o bit menos significativo do Random_Var
+PRIME_NUMBER_1	EQU 11d
+PRIME_NUMBER_2	EQU 13d
 
 ;------------------------------------------------------------------------------
 ; ZONA II: definicao de variaveis
@@ -33,7 +42,7 @@ R_KEY				EQU			4d
 
                 ORIG    8000h
 L0              STR     '################################################################################', FIM_TEXTO
-L1              STR     '#                                   Jogo da Cobrinha                           #', FIM_TEXTO
+L1              STR     '#      Jogo da Cobrinha                                        Score: 0000     #', FIM_TEXTO
 L2              STR     '################################################################################', FIM_TEXTO
 L3              STR     '#                                                                              #', FIM_TEXTO
 L4              STR     '#                                                                              #', FIM_TEXTO
@@ -62,6 +71,7 @@ L10_Menu        STR     '#                                *Iniciar Jogo*        
 L12_Menu        STR     '#                                    *Sair*                                    #', FIM_TEXTO
 
 Char            WORD    'o'
+CharFruit		WORD	'*'
 RowIndex		WORD	0d
 ColumnIndex		WORD	0d
 TextIndex		WORD	0d
@@ -69,7 +79,18 @@ HeadRowPosition	WORD	12d
 HeadColPosition	WORD	40d
 TailRowPosition	WORD	12d
 TailColPosition	WORD	40d
-LastKeyPressed	WORD	R_KEY
+LastKeyPressed	WORD	L_KEY
+
+FruitRowPos		WORD	12d
+FruitColPos		WORD	29d
+ScoreValue		WORD	0d
+ScoreUnit		WORD	'0'
+ScoreDez		WORD	'0'
+ScoreCem		WORD	'0'
+ScoreMil		WORD	'0'
+
+Random_Var	WORD	A5A5h  ; 1010 0101 1010 0101
+RandomState WORD	1d
 
 ;------------------------------------------------------------------------------
 ; ZONA III: definicao de tabela de interrupções
@@ -110,25 +131,37 @@ INT15   WORD    Timer
 Timer:		PUSH    R1
 
 			MOV		R1, M[ LastKeyPressed ]
+			CALL	FruitCheck
 
 			CMP R1, R_KEY
-         	CALL.Z MovRight
+         	CALL.Z 	MovRight
+			MOV		R1, M[ HeadColPosition ]
+            CMP		R1, COL_LIMIT_RIGHT
+            JMP.Z 	EndTimer
+			MOV		R1, M[ LastKeyPressed ]
 
 			CMP R1, U_KEY
-         	CALL.Z MovUp
+         	CALL.Z 	MovUp
+			MOV		R1, M[ HeadRowPosition ]
+            CMP		R1, ROW_LIMIT_UP
+            JMP.Z 	EndTimer
+			MOV		R1, M[ LastKeyPressed ]
 
 			CMP R1, D_KEY
-         	CALL.Z MovDown
+         	CALL.Z 	MovDown
+			MOV		R1, M[ HeadRowPosition ]
+            CMP		R1, ROW_LIMIT_DOWN
+			JMP.Z 	EndTimer
+			MOV		R1, M[ LastKeyPressed ]
 
 			CMP R1, L_KEY
-         	CALL.Z MovLeft
-
-			CALL 	InitializeTimer
-
-			;CALL	MovRight
-			;MOV	R1, M[ HeadColPosition ]
-            ;CMP	R1, COL_LIMIT_RIGHT
-			;CALL.NZ	InitializeTimer
+         	CALL.Z 	MovLeft
+			MOV		R1, M[ HeadColPosition ]
+            CMP		R1, COL_LIMIT_LEFT
+            JMP.Z 	EndTimer
+			MOV		R1, M[ LastKeyPressed ]
+			
+			CALL	InitializeTimer
 
 EndTimer:	POP     R1
 	    	RTI
@@ -139,7 +172,17 @@ EndTimer:	POP     R1
 InitializeTimer:	PUSH 	R1
 					PUSH	R2
 
-					MOV     R1, 5d
+					MOV		R1, M[ HeadColPosition ]
+					CMP		R1, COL_LIMIT_RIGHT
+					JMP.Z 	EndRoutine
+
+					MOV		R1, M[ HeadColPosition ]
+					MOV		R2, COL_LIMIT_LEFT
+					DEC		R2
+					CMP		R1, R2
+					JMP.Z 	EndRoutine
+
+					MOV     R1, 3d
 					MOV     M[ TIMER_COUNT ], R1
 					MOV     R1, 1d
 					MOV     M[ TIMER_CONTROL ], R1
@@ -147,6 +190,38 @@ InitializeTimer:	PUSH 	R1
 EndRoutine:			POP		R2
 					POP 	R1
 					RET
+
+;------------------------------------------------------------------------------
+; Função: RandomV2 (versão 2)
+;
+; Random: Rotina que gera um valor aleatório - guardado em M[Random_Var]
+; Entradas: M[Random_Var]
+; Saidas:   M[Random_Var]
+;------------------------------------------------------------------------------
+
+RandomV2:	PUSH	R1
+			PUSH 	R2
+			PUSH 	R3
+			PUSH 	R4
+
+			MOV 	R1, M[ RandomState ]
+			MOV 	R2, PRIME_NUMBER_1
+			MOV		R3, PRIME_NUMBER_2
+			MOV 	R4, 10d
+
+			MUL 	R1, R2 ; Atenção: O resultado da operacao fica em R1 e R2!!!
+			ADD 	R2, R3 ; Vamos usar os 16 bits menos significativos da MUL
+			MOV 	M[ RandomState ], R2
+
+			DIV 	R2, R4
+			;ADD		R4, 3d
+			MOV 	M[ Random_Var ], R4
+			
+			POP R4
+			POP R3
+			POP	R2
+			POP R1
+			RET
 
 ;------------------------------------------------------------------------------
 ; Rotina para mover para direita
@@ -259,10 +334,6 @@ KeyboardRead3:  PUSH    R1
                 PUSH    R2
                 PUSH    R3
 
-                MOV     R1, M [ IO_STATUS ]
-                CMP     R1, 0d
-                JMP.NZ  EndRead3
-
                 MOV		R1, M[ CURSOR ]
                 MOV		R2, 11d
                 SHL		R2, ROW_SHIFT
@@ -286,9 +357,6 @@ EndRead3:       POP     R3
 MovUp:      PUSH    R1
             PUSH    R2
 
-		    DEC     M[ HeadRowPosition ]
-            DEC		M[ TailRowPosition ]
-
             MOV     R1, M[ HeadRowPosition ]
             MOV     R2, M[ HeadColPosition ]
             SHL     R1, ROW_SHIFT
@@ -306,11 +374,13 @@ MovUp:      PUSH    R1
             MOV     M [IO_WRITE ], R1
 
             CALL	ClearPathUp
+			CALL	ClearPathLeft
+			CALL	ClearPathRight
             DEC     M[ HeadRowPosition ]
             DEC		M[ TailRowPosition ]
 
-            MOV		R1, M[ HeadRowPosition ]
-            CMP		R1, ROW_LIMIT_UP	
+			MOV		R1, M[ HeadRowPosition ]
+            CMP		R1, ROW_LIMIT_UP
             CALL.Z	PrintEnd
             
             POP     R2
@@ -340,6 +410,8 @@ MovRight:   PUSH    R1
             MOV     M [ IO_WRITE ], R1
 
             CALL	ClearPathRight
+			CALL	ClearPathUp
+			CALL	ClearPathDown
             INC     M[ HeadColPosition ]
             INC		M[ TailColPosition ]
 
@@ -374,6 +446,8 @@ MovLeft:    PUSH    R1
             MOV     M [IO_WRITE ], R1
 
             CALL	ClearPathLeft
+			CALL	ClearPathUp
+			CALL	ClearPathDown
             DEC     M[ HeadColPosition ]
             DEC		M[ TailColPosition ]
 
@@ -408,10 +482,12 @@ MovDown:    PUSH    R1
             MOV     M [IO_WRITE ], R1
 
             CALL	ClearPathDown
+			CALL	ClearPathLeft
+			CALL	ClearPathRight
             INC     M[ HeadRowPosition ]
             INC		M[ TailRowPosition ]
 
-            MOV		R1, M[ HeadRowPosition ]
+			MOV		R1, M[ HeadRowPosition ]
             CMP		R1, ROW_LIMIT_DOWN
             CALL.Z	PrintEnd
             
@@ -606,6 +682,145 @@ EndWriteM:	POP		R4
 			RET
 
 ;------------------------------------------------------------------------------
+; Rotina Printar as frutas no mapa
+;------------------------------------------------------------------------------
+PrintFruit:		PUSH	R1
+				PUSH	R2
+				PUSH	R3
+
+				MOV		R1, M[ FruitRowPos ]
+				MOV		R2, M[ FruitColPos ]
+				SHL		R1, ROW_SHIFT
+				OR		R1, R2
+				MOV		M[ CURSOR ], R1
+				MOV		R3, M[ CharFruit ]
+				MOV     M[ IO_WRITE ], R3
+
+				CALL	UpdtadeScore
+
+				POP		R3
+				POP		R2
+				POP		R1
+				RET
+
+;------------------------------------------------------------------------------
+; Rotina para checar se a fruta foi comida
+;------------------------------------------------------------------------------
+FruitCheck:		PUSH	R1
+				PUSH	R2
+
+				MOV		R1, M[ HeadRowPosition ]
+				MOV		R2, M[ HeadColPosition ]
+				CMP		R1, M[ FruitRowPos ]
+				JMP.NZ	EndFruitCheck
+				CMP		R2, M[ FruitColPos ]
+				CALL.Z  GenerateFruit
+
+EndFruitCheck:	POP		R2
+				POP		R1
+				RET
+
+;------------------------------------------------------------------------------
+; Rotina gerar uma nova fruta
+;------------------------------------------------------------------------------
+GenerateFruit:	PUSH	R1
+				PUSH	R2
+				PUSH	R3
+
+				CALL 	RandomV2
+				MOV R1, M[ Random_Var]
+				MOV R2, 20d 
+				DIV R1, R2
+				ADD R2, 3
+				MOV M[ FruitRowPos ], R2
+
+				CALL RandomV2
+				MOV R1, M[ Random_Var]
+				MOV R2, 78d
+				DIV R1, R2
+				ADD R2, 1
+				MOV M[ FruitColPos ], R2
+
+				MOV R1, M [ FruitRowPos ]
+				MOV R2, M [ FruitColPos ]
+
+				CALL	PrintFruit
+
+				POP		R3
+				POP		R2
+				POP		R1
+				RET
+
+;------------------------------------------------------------------------------
+; Rotina atualizar o score
+;------------------------------------------------------------------------------
+UpdtadeScore:	PUSH	R1
+				PUSH	R2
+				PUSH	R3
+				PUSH	R4
+
+				INC		M[ ScoreValue ]				
+				MOV		R3, ':'
+				MOV		R4, '0'
+
+				INC		M[ ScoreUnit ]
+				CMP		M[ ScoreUnit ], R3
+				JMP.NZ	EndScoreUnit
+				MOV		M[ ScoreUnit ], R4
+
+				INC		M[ ScoreDez ]
+				CMP		M[ ScoreDez ], R3
+				JMP.NZ	EndScoreDez
+				MOV		M[ ScoreDez ], R4
+
+				INC		M[ ScoreCem	]
+				CMP		M[ ScoreCem ], R3
+				JMP.NZ	EndScoreCem
+				MOV		M[ ScoreCem ], R4
+
+				INC		M[ ScoreMil	]
+				CMP		M[ ScoreMil ], R3
+				JMP.NZ	EndScoreMil
+				MOV		M[ ScoreMil ], R4
+
+EndScoreMil: 	MOV		R1, 1d
+				MOV		R2, 71d
+				SHL		R1, ROW_SHIFT
+				OR		R1, R2
+				MOV		M[ CURSOR ], R1
+				MOV		R3, M [ ScoreMil ]
+				MOV     M[ IO_WRITE ], R3
+
+EndScoreCem: 	MOV		R1, 1d
+				MOV		R2, 72d
+				SHL		R1, ROW_SHIFT
+				OR		R1, R2
+				MOV		M[ CURSOR ], R1
+				MOV		R3, M [ ScoreCem ]
+				MOV     M[ IO_WRITE ], R3
+
+EndScoreDez:	MOV		R1, 1d
+				MOV		R2, 73d
+				SHL		R1, ROW_SHIFT
+				OR		R1, R2
+				MOV		M[ CURSOR ], R1
+				MOV		R3, M [ ScoreDez ]
+				MOV     M[ IO_WRITE ], R3
+
+EndScoreUnit:	MOV		R1, 1d
+				MOV		R2, 74d
+				SHL		R1, ROW_SHIFT
+				OR		R1, R2
+				MOV		M[ CURSOR ], R1
+				MOV		R3, M [ ScoreUnit ]
+				MOV     M[ IO_WRITE ], R3
+		
+				POP		R4
+				POP		R3
+				POP		R2
+				POP		R1
+				RET
+;------------------------------------------------------------------------------
 ; Main
 ;------------------------------------------------------------------------------
 Main:	ENI
@@ -617,6 +832,7 @@ Main:	ENI
 		
 		;CALL	WirteMenu
 		CALL 	WriteMap
+		CALL 	PrintFruit
 		CALL	InitializeTimer
 
 Cycle: 			BR		Cycle	
